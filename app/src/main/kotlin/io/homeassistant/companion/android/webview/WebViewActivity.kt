@@ -154,12 +154,15 @@ import io.homeassistant.companion.android.webview.externalbus.NavigateTo
 import io.homeassistant.companion.android.webview.externalbus.ShowSidebar
 import io.homeassistant.companion.android.webview.insecure.BlockInsecureFragment
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import org.json.JSONObject
 import timber.log.Timber
 
 @AndroidEntryPoint
@@ -1964,6 +1967,8 @@ class WebViewActivity :
                     }
                     try {
                         request.addRequestHeader("Cookie", CookieManager.getInstance().getCookie(url))
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         // Cannot get cookies, probably not relevant
                     }
@@ -1994,28 +1999,42 @@ class WebViewActivity :
         }
     }
 
+    /**
+     * Triggers a blob download by fetching the blob data via XHR and passing it to the native
+     * [handleBlob] interface as a data URI. Requires the blob URL to still be valid (not yet
+     * revoked by the frontend).
+     */
     private fun triggerBlobDownload(url: String, contentDisposition: String, mimetype: String) {
-        val filename = URLUtil.guessFileName(url, contentDisposition, mimetype)
-        val jsCode = """
-        (function() {
-            var url = '$url';
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', url, true);
-            xhr.responseType = 'blob';
-            xhr.onload = function(e) {
-                if (xhr.status == 200) {
-                    var blob = xhr.response;
-                    var reader = new FileReader();
-                    reader.onloadend = function() {
-                        $javascriptInterface.handleBlob(reader.result, '$filename');
-                    };
-                    reader.readAsDataURL(blob);
-                }
-            };
-            xhr.send();
-        })();
-        """.trimIndent()
-        webView.evaluateJavascript(jsCode, null)
+        lifecycleScope.launch {
+            Timber.d("Triggering blob download for ${sensitive(url)}")
+            val fallbackFilename = withContext(Dispatchers.IO) {
+                URLUtil.guessFileName(url, contentDisposition, mimetype)
+            }
+            val safeUrl = JSONObject.quote(url)
+            val safeFallbackFilename = JSONObject.quote(fallbackFilename)
+            val jsCode = """
+                (async function() {
+                    try {
+                        const response = await fetch($safeUrl);
+                        if (!response.ok) {
+                            console.error('Blob download failed: HTTP ' + response.status + ' for ' + ${sensitive(
+                safeUrl,
+            )});
+                            return;
+                        }
+                        const blob = await response.blob();
+                        const reader = new FileReader();
+                        reader.onloadend = function() {
+                            $javascriptInterface.handleBlob(reader.result, $safeFallbackFilename);
+                        };
+                        reader.readAsDataURL(blob);
+                    } catch (e) {
+                        console.error('Blob download failed:', e);
+                    }
+                })();
+            """.trimIndent()
+            webView.evaluateJavascript(jsCode, null)
+        }
     }
 
     /**
