@@ -24,6 +24,7 @@ val threadPolicyIgnoredViolationRules = listOf(
     IgnoreAndroidAutoRendererServiceDiskRead,
     IgnoreMiuiFontSettingsDiskRead,
     IgnoreMiuiTurboSchedMonitorDiskRead,
+    IgnoreBundledWebViewInitDiskRead,
 )
 
 /**
@@ -217,6 +218,22 @@ private data object IgnoreMiuiFontSettingsDiskRead : IgnoreViolationRule {
  * This occurs when MIUI's performance scheduler checks file availability during
  * Choreographer frame rendering and is beyond application control.
  */
+/**
+ * Ignore a [DiskReadViolation] during bundled Chromium WebView initialization.
+ * The Chromium [AwBrowserContext] requires [SharedPreferences] which triggers a disk read.
+ * This is an internal Chromium requirement that cannot be moved off the main thread.
+ */
+private data object IgnoreBundledWebViewInitDiskRead : IgnoreViolationRule {
+    @RequiresApi(Build.VERSION_CODES.P)
+    override fun shouldIgnore(violation: Violation): Boolean {
+        if (violation !is DiskReadViolation) return false
+
+        return violation.stackTrace.any {
+            it.className == "io.homeassistant.companion.android.chromium.BundledWebView"
+        }
+    }
+}
+
 private data object IgnoreMiuiTurboSchedMonitorDiskRead : IgnoreViolationRule {
     @RequiresApi(Build.VERSION_CODES.P)
     override fun shouldIgnore(violation: Violation): Boolean {

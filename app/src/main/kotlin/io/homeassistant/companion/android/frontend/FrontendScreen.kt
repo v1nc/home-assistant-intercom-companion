@@ -4,8 +4,8 @@ import android.annotation.SuppressLint
 import android.net.Uri
 import android.os.Build
 import android.webkit.WebChromeClient
-import android.webkit.WebView
 import android.webkit.WebViewClient
+import io.homeassistant.companion.android.chromium.BundledWebView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -158,7 +158,7 @@ internal fun FrontendScreenContent(
     onNotificationPermissionResult: (Boolean) -> Unit = {},
     supportsNotificationPermission: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
 ) {
-    var webView by remember { mutableStateOf<WebView?>(null) }
+    var webView by remember { mutableStateOf<BundledWebView?>(null) }
 
     WebViewEffects(
         webView = webView,
@@ -364,7 +364,7 @@ private fun ErrorOverlay(
 @Composable
 private fun SafeHAWebView(
     onBackClick: () -> Unit,
-    onWebViewCreated: (WebView) -> Unit,
+    onWebViewCreated: (BundledWebView) -> Unit,
     webViewClient: WebViewClient,
     frontendJsCallback: FrontendJsCallback,
     contentState: FrontendViewState.Content?,
@@ -400,7 +400,6 @@ private fun SafeHAWebView(
             }
 
             HAWebView(
-                nightModeTheme = contentState?.nightModeTheme,
                 modifier = Modifier
                     .weight(1f)
                     .background(Color.Transparent),
@@ -447,7 +446,7 @@ private fun Color.Overlay(modifier: Modifier = Modifier) {
  * Handles WebView side effects: URL loading and script evaluation.
  */
 @Composable
-private fun WebViewEffects(webView: WebView?, url: String, scriptsToEvaluate: Flow<WebViewScript>) {
+private fun WebViewEffects(webView: BundledWebView?, url: String, scriptsToEvaluate: Flow<WebViewScript>) {
     if (webView != null) {
         LaunchedEffect(webView, url) {
             Timber.v("Load url ${sensitive(url)}")

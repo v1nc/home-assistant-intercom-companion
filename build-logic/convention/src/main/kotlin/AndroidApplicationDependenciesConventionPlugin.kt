@@ -23,10 +23,16 @@ class AndroidApplicationDependenciesConventionPlugin : Plugin<Project> {
         with(target) {
             apply(plugin = libs.plugins.android.application.getPluginId())
 
+            // Exclude org.chromium.net to avoid duplicate classes with the bundled Chromium WebView
+            configurations.all {
+                exclude(group = "org.chromium.net")
+            }
+
             extensions.getByType<ApplicationExtension>().apply {
                 dependencies {
                     "implementation"(project(":common"))
                     "implementation"(project(":microwakeword"))
+                    "implementation"(project(":chromium-webview"))
 
                     "implementation"(libs.blurView)
                     "implementation"(libs.haze)
@@ -69,11 +75,9 @@ class AndroidApplicationDependenciesConventionPlugin : Plugin<Project> {
                     "implementation"(libs.webkit)
 
                     "implementation"(libs.bundles.media3)
-                    "fullImplementation"(libs.media3.datasource.cronet)
-                    "minimalImplementation"(libs.media3.datasource.cronet) {
-                        exclude(group = "com.google.android.gms", module = "play-services-cronet")
-                    }
-                    "minimalImplementation"(libs.cronet.embedded)
+                    // Use OkHttp for media data sources instead of Cronet to avoid
+                    // duplicate org.chromium classes with the bundled Chromium WebView.
+                    "implementation"(libs.media3.datasource.okhttp)
 
                     "implementation"(libs.compose.animation)
                     "implementation"(libs.compose.material)

@@ -39,6 +39,11 @@ android {
         // Until we fully migrate to Material3 this lint issue is too verbose https://github.com/home-assistant/android/issues/5420
         disable += listOf("UsingMaterialAndMaterial3Libraries")
     }
+
+    androidResources {
+        // Chromium assets must not be compressed for the bundled WebView to load them
+        noCompress += listOf("bin", "dat", "pak")
+    }
 }
 
 firebaseAppDistributionDefault {

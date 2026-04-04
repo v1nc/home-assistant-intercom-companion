@@ -1,11 +1,9 @@
 package io.homeassistant.companion.android.settings.developer
 
 import android.content.Context
-import android.webkit.WebStorage
 import androidx.activity.result.ActivityResult
 import androidx.preference.PreferenceDataStore
-import androidx.webkit.WebStorageCompat
-import androidx.webkit.WebViewFeature
+import io.homeassistant.companion.android.chromium.BundledCookieManager
 import io.homeassistant.companion.android.common.R as commonR
 import io.homeassistant.companion.android.common.data.prefs.PrefsRepository
 import io.homeassistant.companion.android.common.data.servers.ServerManager
@@ -15,7 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.asExecutor
+
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -153,18 +151,15 @@ class DeveloperSettingsPresenterImpl @Inject constructor(
         }
     }
 
-    override fun webViewSupportsClearCache(): Boolean =
-        WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA)
+    override fun webViewSupportsClearCache(): Boolean = true
 
     override fun clearWebViewCache() {
-        if (!webViewSupportsClearCache()) return
-
         try {
-            WebStorageCompat.deleteBrowsingData(WebStorage.getInstance(), Dispatchers.IO.asExecutor()) {
-                view.onWebViewClearCacheResult(success = true)
-            }
+            BundledCookieManager.removeAllCookies()
+            BundledCookieManager.flush()
+            view.onWebViewClearCacheResult(success = true)
         } catch (e: RuntimeException) {
-            Timber.e(e, "Unable to clear WebView cache")
+            Timber.e(e, "Unable to clear bundled WebView cache")
             view.onWebViewClearCacheResult(success = false)
         }
     }

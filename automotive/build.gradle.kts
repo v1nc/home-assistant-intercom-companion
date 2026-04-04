@@ -36,6 +36,11 @@ android {
         }
     }
 
+    androidResources {
+        // Chromium assets must not be compressed for the bundled WebView to load them
+        noCompress += listOf("bin", "dat", "pak")
+    }
+
     sourceSets {
         getByName("main") {
             kotlin {

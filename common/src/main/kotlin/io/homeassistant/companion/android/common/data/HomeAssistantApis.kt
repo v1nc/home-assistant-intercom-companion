@@ -3,7 +3,6 @@ package io.homeassistant.companion.android.common.data
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import android.webkit.CookieManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.homeassistant.companion.android.common.BuildConfig
 import io.homeassistant.companion.android.common.util.kotlinJsonMapper
@@ -58,16 +57,8 @@ class HomeAssistantApis @Inject constructor(
         }
 
         val isWear = appContext.packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)
-        if (!isWear) {
-            var cookieManager: CookieManager? = null
-            try {
-                cookieManager = CookieManager.getInstance()
-            } catch (e: Exception) {
-                // Noop
-            }
-            if (cookieManager != null) {
-                builder.cookieJar(CookieJarCookieManagerShim())
-            }
+        if (!isWear && CookieProvider.instance != null) {
+            builder.cookieJar(CookieJarCookieManagerShim())
         }
 
         builder.callTimeout(CALL_TIMEOUT, TimeUnit.SECONDS)

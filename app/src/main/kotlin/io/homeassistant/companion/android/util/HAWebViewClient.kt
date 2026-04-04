@@ -210,10 +210,9 @@ class HAWebViewClient internal constructor(
 
     override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
         Timber.e("onRenderProcessGone: webView crashed")
-        view?.let { webView ->
-            frontendJsCallback?.attachToWebView(webView)
-            onCrash?.invoke()
-        }
+        // Crash recovery is handled by the caller via the onCrash callback,
+        // which is responsible for re-attaching the JS bridge to the BundledWebView.
+        onCrash?.invoke()
         return true
     }
 

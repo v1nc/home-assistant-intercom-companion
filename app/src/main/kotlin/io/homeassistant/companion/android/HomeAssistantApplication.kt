@@ -19,6 +19,8 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import dagger.hilt.android.HiltAndroidApp
+import io.homeassistant.companion.android.chromium.ChromiumInitializer
+import io.homeassistant.companion.android.common.data.CookieProvider
 import io.homeassistant.companion.android.common.data.keychain.KeyChainRepository
 import io.homeassistant.companion.android.common.data.keychain.NamedKeyChain
 import io.homeassistant.companion.android.common.data.prefs.PrefsRepository
@@ -32,6 +34,7 @@ import io.homeassistant.companion.android.database.settings.SettingsDao
 import io.homeassistant.companion.android.sensors.SensorReceiver
 import io.homeassistant.companion.android.settings.language.LanguagesManager
 import io.homeassistant.companion.android.themes.NightModeManager
+import io.homeassistant.companion.android.util.BundledCookieProvider
 import io.homeassistant.companion.android.util.LifecycleHandler
 import io.homeassistant.companion.android.util.QuestUtil
 import io.homeassistant.companion.android.util.initCrashSaving
@@ -97,6 +100,10 @@ open class HomeAssistantApplication :
         // We should initialize the logger as early as possible in the lifecycle of the application
         Timber.plant(Timber.DebugTree())
         Timber.i("Running ${BuildConfig.VERSION_NAME} on SDK ${Build.VERSION.SDK_INT}")
+
+        // Initialize the bundled Chromium WebView engine before any WebView is created
+        ChromiumInitializer.initialize(this)
+        CookieProvider.instance = BundledCookieProvider
 
         registerActivityLifecycleCallbacks(LifecycleHandler)
 

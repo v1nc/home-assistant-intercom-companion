@@ -27,7 +27,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import android.webkit.CookieManager
+import io.homeassistant.companion.android.chromium.BundledCookieManager
 import android.webkit.HttpAuthHandler
 import android.webkit.JavascriptInterface
 import android.webkit.JsResult
@@ -40,6 +40,7 @@ import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
+import io.homeassistant.companion.android.chromium.BundledWebView
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -87,8 +88,6 @@ import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.webkit.WebViewCompat
-import androidx.webkit.WebViewFeature
 import dagger.hilt.android.AndroidEntryPoint
 import io.homeassistant.companion.android.BaseActivity
 import io.homeassistant.companion.android.BuildConfig
@@ -99,7 +98,7 @@ import io.homeassistant.companion.android.barcode.BarcodeScannerActivity
 import io.homeassistant.companion.android.common.R as commonR
 import io.homeassistant.companion.android.common.data.keychain.KeyChainRepository
 import io.homeassistant.companion.android.common.data.keychain.NamedKeyChain
-import io.homeassistant.companion.android.common.data.prefs.NightModeTheme
+
 import io.homeassistant.companion.android.common.data.servers.ServerManager
 import io.homeassistant.companion.android.common.util.AppVersionProvider
 import io.homeassistant.companion.android.common.util.DisabledLocationHandler
@@ -257,7 +256,7 @@ class WebViewActivity :
     @Inject
     lateinit var dataSourceFactory: DataSource.Factory
 
-    private lateinit var webView: WebView
+    private lateinit var webView: BundledWebView
     private var loadedUrl: Uri? = null
     private lateinit var decor: FrameLayout
     private var customViewFromWebView = mutableStateOf<View?>(null)
@@ -328,7 +327,7 @@ class WebViewActivity :
         val displayMetrics: DisplayMetrics,
         val layoutDirection: LayoutDirection,
     ) {
-        fun applyInsets(webView: WebView) {
+        fun applyInsets(webView: BundledWebView) {
             webView.applyInsets(windowInsets, density, displayMetrics, layoutDirection)
         }
     }
@@ -366,7 +365,7 @@ class WebViewActivity :
         )
         setStatusBarAndBackgroundColor(colorLaunchScreenBackground, colorLaunchScreenBackground)
 
-        webView = WebView(this)
+        webView = BundledWebView(this)
 
         lifecycleScope.launch {
             appLocked.value = presenter.isAppLocked()
@@ -383,7 +382,6 @@ class WebViewActivity :
             val statusBarColor by remember { statusBarColor }
             val backgroundColor by remember { backgroundColor }
             val serverHandleInsets by remember { serverHandleInsets }
-            var nightModeTheme by remember { mutableStateOf<NightModeTheme?>(null) }
             val snackbarHostState = remember { snackbarHostState }
             var webViewInitialized by remember { webViewInitialized }
             var shouldAskNotificationPermission by remember { mutableStateOf(false) }
@@ -405,7 +403,6 @@ class WebViewActivity :
             }
 
             LaunchedEffect(Unit) {
-                nightModeTheme = nightModeManager.getCurrentNightMode()
                 shouldAskNotificationPermission = presenter.shouldAskNotificationPermission()
             }
 
@@ -421,7 +418,6 @@ class WebViewActivity :
                 shouldAskNotificationPermission = shouldAskNotificationPermission,
                 webViewInitialized = webViewInitialized,
                 serverHandleInsets = serverHandleInsets,
-                nightModeTheme = nightModeTheme,
                 statusBarColor = statusBarColor,
                 backgroundColor = backgroundColor,
                 onFullscreenClicked = { isFullScreen ->
@@ -477,7 +473,7 @@ class WebViewActivity :
 
             lifecycleScope.launch {
                 currentAutoplay = presenter.isAutoPlayVideoEnabled().apply {
-                    settings.mediaPlaybackRequiresUserGesture = !this
+                    bundledSettings.mediaPlaybackRequiresUserGesture = !this
                 }
             }
 
@@ -507,7 +503,7 @@ class WebViewActivity :
                     }
 
                     setWebViewZoom()
-                    if (moreInfoEntity != "" && view?.progress == 100 && isConnected) {
+                    if (moreInfoEntity != "" && isConnected) {
                         lifecycleScope.launch {
                             val owner = "onPageFinished:$moreInfoEntity"
                             if (moreInfoMutex.tryLock(owner)) {
@@ -734,9 +730,7 @@ class WebViewActivity :
             webViewAddJavascriptInterface()
         }
 
-        val cookieManager = CookieManager.getInstance()
-        cookieManager.setAcceptCookie(true)
-        cookieManager.setAcceptThirdPartyCookies(webView, true)
+        BundledCookieManager.setAcceptCookie(true)
 
         window.decorView.setOnSystemUiVisibilityChangeListener { visibility ->
             if (visibility and View.SYSTEM_UI_FLAG_FULLSCREEN == 0) {
@@ -748,12 +742,7 @@ class WebViewActivity :
             }
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val webviewPackage = WebViewCompat.getCurrentWebViewPackage(this)
-            Timber.d(
-                "Current webview package ${webviewPackage?.packageName} and version ${webviewPackage?.versionName}",
-            )
-        }
+        Timber.d("Using bundled Chromium WebView")
 
         lifecycleScope.launch {
             if (presenter.isKeepScreenOnEnabled()) {
@@ -1205,7 +1194,7 @@ class WebViewActivity :
             SensorWorker.start(this@WebViewActivity)
             WebsocketManager.start(this@WebViewActivity)
 
-            WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG || presenter.isWebViewDebugEnabled())
+            // Debug mode for bundled Chromium is configured in ChromiumInitializer
 
             requestedOrientation = when (presenter.getScreenOrientation()) {
                 getString(
@@ -1691,10 +1680,7 @@ class WebViewActivity :
                     waitForConnection()
                 }
 
-            var tlsWebViewClient: TLSWebViewClient? = null
-            if (WebViewFeature.isFeatureSupported(WebViewFeature.GET_WEB_VIEW_CLIENT)) {
-                tlsWebViewClient = WebViewCompat.getWebViewClient(webView) as TLSWebViewClient
-            }
+            val tlsWebViewClient: TLSWebViewClient? = webView.webViewClient as? TLSWebViewClient
 
             if (tlsWebViewClient?.isTLSClientAuthNeeded == true &&
                 (errorType == ErrorType.TIMEOUT_GENERAL || errorType == ErrorType.TIMEOUT_EXTERNAL_BUS) &&
@@ -1966,7 +1952,7 @@ class WebViewActivity :
                         request.addRequestHeader("Authorization", presenter.getAuthorizationHeader())
                     }
                     try {
-                        request.addRequestHeader("Cookie", CookieManager.getInstance().getCookie(url))
+                        request.addRequestHeader("Cookie", BundledCookieManager.getCookie(url))
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -2042,7 +2028,7 @@ class WebViewActivity :
      * [WebView.dispatchKeyEvent] function, this does not used the focused element (to avoid text inputs).
      * The parameters should provide a JavaScript KeyboardEvent's properties.
      */
-    private fun WebView.dispatchKeyDownEventToDocument(
+    private fun BundledWebView.dispatchKeyDownEventToDocument(
         key: String,
         code: String,
         keyCode: Int,
@@ -2078,7 +2064,7 @@ class WebViewActivity :
         webView.setInitialScale((resources.displayMetrics.density * presenter.getPageZoomLevel()).toInt())
 
         // Enable pinch to zoom
-        webView.settings.builtInZoomControls = presenter.isPinchToZoomEnabled()
+        webView.bundledSettings.builtInZoomControls = presenter.isPinchToZoomEnabled()
         // Use idea from https://github.com/home-assistant/iOS/pull/1472 to filter viewport
         val pinchToZoom = if (presenter.isPinchToZoomEnabled()) "true" else "false"
         webView.evaluateJavascript(

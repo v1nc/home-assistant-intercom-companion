@@ -2,7 +2,7 @@ package io.homeassistant.companion.android.util
 
 import android.util.DisplayMetrics
 import android.view.View
-import android.webkit.WebView
+import io.homeassistant.companion.android.chromium.BundledWebView
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -111,7 +111,7 @@ fun View.applySafeDrawingInsets(
  * Applies safe area insets to the WebView by setting CSS custom properties.
  * These properties are used by the Home Assistant frontend for edge-to-edge display.
  */
-fun WebView.applyInsets(
+fun BundledWebView.applyInsets(
     insets: WindowInsets,
     density: Density,
     displayMetrics: DisplayMetrics,

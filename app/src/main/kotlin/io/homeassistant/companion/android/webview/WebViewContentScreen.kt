@@ -3,7 +3,7 @@ package io.homeassistant.companion.android.webview
 import android.annotation.SuppressLint
 import android.os.Build
 import android.view.View
-import android.webkit.WebView
+import io.homeassistant.companion.android.chromium.BundledWebView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,7 +45,7 @@ import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
 import io.homeassistant.companion.android.common.R as commonR
 import io.homeassistant.companion.android.common.compose.theme.HATheme
-import io.homeassistant.companion.android.common.data.prefs.NightModeTheme
+
 import io.homeassistant.companion.android.frontend.permissions.NotificationPermissionPrompt
 import io.homeassistant.companion.android.util.compose.media.player.HAMediaPlayer
 import io.homeassistant.companion.android.util.compose.webview.HAWebView
@@ -55,7 +55,7 @@ import timber.log.Timber
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 internal fun WebViewContentScreen(
-    webView: WebView?,
+    webView: BundledWebView?,
     player: Player?,
     snackbarHostState: SnackbarHostState,
     playerSize: DpSize?,
@@ -68,7 +68,6 @@ internal fun WebViewContentScreen(
     onFullscreenClicked: (isFullscreen: Boolean) -> Unit,
     onNotificationPermissionResult: (Boolean) -> Unit,
     serverHandleInsets: Boolean,
-    nightModeTheme: NightModeTheme? = null,
     statusBarColor: Color? = null,
     backgroundColor: Color? = null,
     supportsNotificationPermission: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
@@ -91,7 +90,6 @@ internal fun WebViewContentScreen(
             ) {
                 SafeHAWebView(
                     webView,
-                    nightModeTheme,
                     snackbarHostState = snackbarHostState,
                     currentAppLocked = currentAppLocked,
                     statusBarColor = statusBarColor,
@@ -145,8 +143,7 @@ internal fun WebViewContentScreen(
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 private fun SafeHAWebView(
-    webView: WebView?,
-    nightModeTheme: NightModeTheme?,
+    webView: BundledWebView?,
     snackbarHostState: SnackbarHostState,
     currentAppLocked: Boolean,
     statusBarColor: Color?,
@@ -180,7 +177,6 @@ private fun SafeHAWebView(
                 )
             }
             HAWebView(
-                nightModeTheme = nightModeTheme,
                 factory = { webView },
                 onWebViewCreationFailed = { exception ->
                     Timber.e(exception, "Failed to instantiate WebView")

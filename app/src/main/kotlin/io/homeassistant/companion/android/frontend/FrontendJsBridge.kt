@@ -1,7 +1,7 @@
 package io.homeassistant.companion.android.frontend
 
 import android.webkit.JavascriptInterface
-import android.webkit.WebView
+import io.homeassistant.companion.android.chromium.BundledWebView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -100,7 +100,7 @@ interface FrontendJsCallback {
      * This registers the JavaScript interface so the frontend can call native methods.
      * Any previously attached interface is removed first to prevent duplicates.
      */
-    fun attachToWebView(webView: WebView)
+    fun attachToWebView(webView: BundledWebView)
 }
 
 /**
@@ -146,7 +146,7 @@ class FrontendJsBridge(
         scope.launch { handler.onHomeAssistantSetTheme() }
     }
 
-    override fun attachToWebView(webView: WebView) {
+    override fun attachToWebView(webView: BundledWebView) {
         with(webView) {
             removeJavascriptInterface(INTERFACE_NAME)
             addJavascriptInterface(this@FrontendJsBridge, INTERFACE_NAME)
@@ -178,7 +178,7 @@ class FrontendJsBridge(
             override fun externalBus(message: String) {
             }
 
-            override fun attachToWebView(webView: WebView) {
+            override fun attachToWebView(webView: BundledWebView) {
             }
         }
     }
