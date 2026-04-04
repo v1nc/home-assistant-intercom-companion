@@ -10,5 +10,6 @@ This makes Home Assistant slow to use and makes it miss different front end feat
 
 ## Version 1 (Chromium 93)
 - branch `chromium-aw`
-- bundles (chromium-aw)[https://github.com/ridi/chromium-aw] which was discontinued on Chromium Version 93
+- bundles [chromium-aw](https://github.com/ridi/chromium-aw) which was discontinued on Chromium Version 93
 - works with Android 10 Tablets
+- **[Download](https://github.com/v1nc/home-assistant-intercom-companion/releases/download/version-1/home-assistant-webview-93.apk)**
